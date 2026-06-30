@@ -26,23 +26,20 @@ jobs:
 
       - name: Setup SSH
         run: |
-          echo "SSH_HOST length: ${#SSH_HOST}"
-          echo "SSH_USER length: ${#SSH_USER}"
-          echo "SSH_KEY length: ${#SSH_KEY}"
-          echo "DEPLOY_PATH length: ${#DEPLOY_PATH}"
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy via scp
+        run: |
+          SSH_OPTS="-i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no"
+          # 清空远端目录里的旧文件
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "rm -rf $DEPLOY_PATH/*"
+          # 上传新构建产物
+          scp $SSH_OPTS -r dist/* "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-
-      - name: Deploy via rsync
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
-            dist/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
