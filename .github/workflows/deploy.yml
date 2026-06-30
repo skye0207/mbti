@@ -26,10 +26,19 @@ jobs:
 
       - name: Setup SSH
         run: |
+          echo "SSH_HOST length: ${#SSH_HOST}"
+          echo "SSH_USER length: ${#SSH_USER}"
+          echo "SSH_KEY length: ${#SSH_KEY}"
+          echo "DEPLOY_PATH length: ${#DEPLOY_PATH}"
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
       - name: Deploy via rsync
         run: |
