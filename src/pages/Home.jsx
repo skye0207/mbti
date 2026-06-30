@@ -1,14 +1,15 @@
+import { useState } from 'react';
 import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
-
-const featureCards = [
-  { page: 'translator', icon: '💬', title: '消息翻译器', desc: '把想说的话翻成更好被理解的表达。' },
-  { page: 'guide', icon: '🧭', title: 'MBTI 相处指南', desc: '看看不同人格之间如何舒服相处。' },
-  { page: 'review', icon: '🧩', title: '冲突复盘', desc: '拆解误会，生成补救话术。' },
-  { page: 'profile', icon: '🪪', title: '我的沟通档案', desc: '保存你的 MBTI 和表达偏好。' }
-];
+import LLMConfigModal from '../components/LLMConfigModal.jsx';
+import { getLLMConfig, isLLMAvailable } from '../utils/llmClient.js';
 
 export default function Home({ profile, onChangePage }) {
+  const [configOpen, setConfigOpen] = useState(false);
+  const [cfgVersion, setCfgVersion] = useState(0);
+  const cfg = getLLMConfig();
+  const ready = isLLMAvailable();
+
   return (
     <div className="page home-page">
       <section className="hero-panel">
@@ -20,8 +21,8 @@ export default function Home({ profile, onChangePage }) {
             结合 MBTI 沟通风格，帮你把想说但不好说的话，翻译成对方更容易接住的表达。
           </p>
           <div className="hero-actions">
-            <Button onClick={() => onChangePage('translator')}>开始翻译</Button>
-            <Button variant="secondary" onClick={() => onChangePage('guide')}>查看相处指南</Button>
+            <Button onClick={() => onChangePage('quiz')}>开始人格测试</Button>
+            <Button variant="secondary" onClick={() => onChangePage('translator')}>去翻译</Button>
           </div>
         </div>
 
@@ -40,41 +41,44 @@ export default function Home({ profile, onChangePage }) {
         </div>
       </section>
 
-      <section className="grid two-col top-gap">
-        <Card className="weather-card" badge="今日人格天气">
-          <div className="weather-title">
-            <span>🌤️</span>
-            <div>
-              <h2>{profile.nickname || '小译友'}，今天适合温柔表达</h2>
-              <p>你的 MBTI：<strong>{profile.mbti}</strong></p>
-            </div>
-          </div>
-          <div className="weather-list">
-            <p><strong>今日关键词：</strong>别让嘴比心快</p>
-            <p><strong>情绪温度：</strong>微微上头</p>
-            <p><strong>沟通建议：</strong>先说感受，再说需求</p>
-            <p><strong>今日避雷：</strong>不要用“你每次都……”开头</p>
-            <p><strong>幸运表达：</strong>我想认真说一下我的感受</p>
-          </div>
-        </Card>
+      <section className="top-gap">
+        <Card className="llm-config-card" badge="AI 模型配置">
+          <h2 style={{ margin: '0 0 6px' }}>AI 引擎</h2>
+          <p style={{ opacity: 0.7, fontSize: 13, margin: '0 0 12px' }}>
+            人格测试与翻译器的 AI 能力需要先配置 LLM。
+          </p>
 
-        <Card className="tips-card" badge="今日口头禅替换">
-          <h2>把“你怎么这样”换成：</h2>
-          <blockquote>“这件事让我有点不舒服，我想和你说清楚。”</blockquote>
-          <p>少一点审判，多一点描述；少一点翻车，多一点会意。</p>
-          <Button variant="ghost" onClick={() => onChangePage('translator')}>去翻译一句</Button>
+          <div style={{ fontSize: 13, lineHeight: 1.9 }} key={cfgVersion}>
+            <p style={{ margin: 0 }}>
+              <strong>状态：</strong>
+              {ready
+                ? <span style={{ color: '#3aa86b' }}>● 已就绪</span>
+                : <span style={{ color: '#c47a00' }}>● 未配置</span>}
+            </p>
+            <p style={{ margin: 0, wordBreak: 'break-all' }}>
+              <strong>Base URL：</strong>{cfg.baseUrl || <em style={{ opacity: 0.5 }}>未填写</em>}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>API Key：</strong>{cfg.apiKey ? '••••••••（已保存）' : <em style={{ opacity: 0.5 }}>未填写</em>}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>模型：</strong>{cfg.model || <em style={{ opacity: 0.5 }}>未选择</em>}
+            </p>
+          </div>
+
+          <div className="button-row" style={{ marginTop: 14 }}>
+            <Button variant={ready ? 'secondary' : 'primary'} onClick={() => setConfigOpen(true)}>
+              {ready ? '修改配置' : '立即配置'}
+            </Button>
+          </div>
         </Card>
       </section>
 
-      <section className="feature-grid top-gap">
-        {featureCards.map((item) => (
-          <button key={item.page} className="feature-card" onClick={() => onChangePage(item.page)}>
-            <span>{item.icon}</span>
-            <h3>{item.title}</h3>
-            <p>{item.desc}</p>
-          </button>
-        ))}
-      </section>
+      <LLMConfigModal
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        onSaved={() => { setConfigOpen(false); setCfgVersion((v) => v + 1); }}
+      />
     </div>
   );
 }

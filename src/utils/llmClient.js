@@ -48,6 +48,31 @@ export function isLLMAvailable() {
 }
 
 /**
+ * 查询模型列表（OpenAI 兼容的 GET /models 端点）。
+ * 返回 [{ id: 'gpt-4o-mini' }, ...]。失败时抛错。
+ */
+export async function fetchModels({ baseUrl, apiKey, signal } = {}) {
+  const cfg = getLLMConfig();
+  const url = `${(baseUrl || cfg.baseUrl).replace(/\/$/, '')}/models`;
+  const key = apiKey || cfg.apiKey;
+  if (!url || !key) throw new Error('MISSING_CONFIG');
+
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${key}` },
+    signal
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`MODELS_HTTP_${resp.status}: ${text.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  const list = data?.data || data?.models || [];
+  return list
+    .map((m) => (typeof m === 'string' ? { id: m } : { id: m.id || m.name || m.model }))
+    .filter((m) => m.id);
+}
+
+/**
  * 调用 LLM，OpenAI Chat Completions 兼容协议。
  * @param {Object} params
  * @param {string} params.system - 系统提示（Agent 人格）

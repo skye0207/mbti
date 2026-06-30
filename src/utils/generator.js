@@ -1,6 +1,6 @@
 // generator.js —— 从"规则模板"重构为"多 Agent 编排器"。
 //
-// 对外保持向后兼容（generateTranslateResult / generateGuideResult / generateReviewResult 同名同形），
+// 对外保持向后兼容（generateTranslateResult / generateGuideResult 同名同形），
 // 但行为升级为：
 //   1) 调用 TranslatorAgent 生成多版本翻译稿
 //   2) 调用 OpponentAgent 模拟对方反应（仅 Translator 流程）
@@ -268,35 +268,6 @@ export function generateGuideResult(input) {
       targetStyle.isIntroverted ? '你现在必须马上给我一个答案。' : '你别说了，我不想听。'
     ]
   };
-}
-
-export function generateReviewResult(input) {
-  const { myMbti = 'ENFP', targetMbti = 'INTJ', conflictText = '', goal = '表达委屈', relation = '朋友' } = input || {};
-  const raw = normalizeOriginal(conflictText);
-  const targetStyle = getTargetStyle(targetMbti);
-  const myStyle = getTargetStyle(myMbti);
-
-  const surfaceProblem = raw ? `表面上是：${raw}` : `表面上是：你们在${relation}关系里的某个期待没有对齐。`;
-  const userConcern = myStyle.isThinking
-    ? '你可能真正介意的是：事情没有被清楚处理，边界或规则没有被尊重。'
-    : '你可能真正介意的是：自己的感受有没有被看见，以及关系是否仍然安全。';
-  const targetConcern = targetStyle.isThinking
-    ? '对方可能更在意：问题怎么解决、边界在哪里、是否被情绪化指责。'
-    : '对方可能更在意：自己有没有被理解、有没有被否定或误解。';
-  const mismatch = targetStyle.isIntroverted
-    ? '表达错位点：你可能在要回应，对方可能在要空间；你越追，对方越容易退。'
-    : '表达错位点：你可能在等对方理解潜台词，对方可能需要更直接的表达。';
-  const advice = goal === '设立边界'
-    ? '建议补救方式：先承认关系或合作价值，再把边界说清楚，避免让边界听起来像惩罚。'
-    : goal === '道歉'
-      ? '建议补救方式：先为具体表达道歉，不要用"但是"急着解释，再说明你真实的需求。'
-      : '建议补救方式：把"指责对方"改成"说明感受 + 提出期待"，让对话从对抗回到沟通。';
-
-  const messageToSend = targetStyle.isIntroverted
-    ? `我刚才想了一下，关于这件事我可能有点上头。我的真实想法不是要逼你马上回应，而是想让你知道我在意的点。你方便的时候，我们再好好聊一下，可以吗？`
-    : `我想把刚才那件事重新说清楚一点。我不是想和你争对错，只是这件事确实让我有点在意。我希望我们可以直接聊聊，找到一个彼此都舒服的方式。`;
-
-  return { surfaceProblem, userConcern, targetConcern, mismatch, advice, messageToSend };
 }
 
 // 已废弃：旧的占位接口。保留导出避免外部 import 报错。

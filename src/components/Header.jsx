@@ -1,9 +1,8 @@
 const navItems = [
   { key: 'home', label: '首页', icon: '🌤️' },
+  { key: 'quiz', label: '人格测试', icon: '🪞' },
   { key: 'translator', label: '消息翻译', icon: '💬' },
-  { key: 'guide', label: '相处指南', icon: '🧭' },
-  { key: 'review', label: '冲突复盘', icon: '🧩' },
-  { key: 'profile', label: '我的档案', icon: '🪪' }
+  { key: 'guide', label: '相处指南', icon: '🧭' }
 ];
 
 export default function Header({ currentPage, onChangePage }) {

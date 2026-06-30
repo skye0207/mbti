@@ -4,22 +4,27 @@ import Toast from './components/Toast.jsx';
 import Home from './pages/Home.jsx';
 import Translator from './pages/Translator.jsx';
 import Guide from './pages/Guide.jsx';
-import Review from './pages/Review.jsx';
-import Profile from './pages/Profile.jsx';
-import { loadProfile, saveProfile } from './utils/storage.js';
+import Quiz from './pages/Quiz.jsx';
+import { loadQuizResult } from './utils/quizStorage.js';
 
 const pages = {
   home: Home,
   translator: Translator,
   guide: Guide,
-  review: Review,
-  profile: Profile
+  quiz: Quiz
 };
+
+const FALLBACK_PROFILE = { mbti: 'ENFP', nickname: '小译友' };
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [profile, setProfile] = useState(() => loadProfile());
   const [toast, setToast] = useState('');
+  // 每次切页时重新读取测试结果，保证测试完后其他页面能立刻拿到新 MBTI
+  const profile = useMemo(() => {
+    const quiz = loadQuizResult();
+    return quiz?.mbti ? { ...FALLBACK_PROFILE, mbti: quiz.mbti } : FALLBACK_PROFILE;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   const Page = useMemo(() => pages[currentPage] || Home, [currentPage]);
 
@@ -27,16 +32,6 @@ export default function App() {
     setToast(message);
     window.clearTimeout(showToast.timer);
     showToast.timer = window.setTimeout(() => setToast(''), 2200);
-  }
-
-  function handleSaveProfile(nextProfile) {
-    const success = saveProfile(nextProfile);
-    if (success) {
-      setProfile(nextProfile);
-      showToast('保存成功，译站更懂你了');
-    } else {
-      showToast('保存失败，请稍后再试');
-    }
   }
 
   return (
@@ -48,7 +43,6 @@ export default function App() {
         <Page
           profile={profile}
           onChangePage={setCurrentPage}
-          onSaveProfile={handleSaveProfile}
           showToast={showToast}
         />
       </main>
