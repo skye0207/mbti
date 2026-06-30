@@ -988,6 +988,12 @@ textarea {
 }
 
 @media (max-width: 980px) {
+  .quiz-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .quiz-layout aside {
+    position: static !important;
+  }
   .app-shell {
     padding: 22px;
   }

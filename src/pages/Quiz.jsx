@@ -3,6 +3,7 @@ import Card from '../components/Card.jsx';
 import Button from '../components/Button.jsx';
 import LLMConfigModal from '../components/LLMConfigModal.jsx';
 import LikertSlider from '../components/LikertSlider.jsx';
+import PurpleSage from '../components/PurpleSage.jsx';
 import {
   SEED_QUESTIONS, SCALE_OPTIONS, calculateMBTI, MBTI_DESCRIPTIONS,
   QUESTIONS_PER_ROUND, TOTAL_ROUNDS, TOTAL_QUESTIONS
@@ -188,6 +189,7 @@ export default function Quiz({ onChangePage, showToast }) {
 
   // ========== quiz ==========
   if (phase === 'quiz') {
+    const latestAnalysis = analyses[analyses.length - 1];
     return (
       <div className="page quiz-page">
         <PageHeading
@@ -206,25 +208,6 @@ export default function Quiz({ onChangePage, showToast }) {
           }} />
         </div>
 
-        {/* 历史分析（折叠显示）*/}
-        {analyses.length > 0 && (
-          <Card badge={`AI 已完成 ${analyses.length} 轮分析`} className="quiz-analyses">
-            {analyses.map((a, i) => (
-              <details key={i} style={{ marginBottom: 8 }} open={i === analyses.length - 1}>
-                <summary style={{ cursor: 'pointer', fontWeight: 500, padding: '4px 0' }}>
-                  第 {a.roundIdx + 1} 轮分析 · 推断 MBTI：{a.mbti}
-                </summary>
-                <p style={{ margin: '8px 0 4px', lineHeight: 1.8, fontSize: 14, opacity: 0.85 }}>
-                  {a.text}
-                </p>
-                <div style={{ fontSize: 12, opacity: 0.6 }}>
-                  E {a.percents.E}% · S {a.percents.S}% · T {a.percents.T}% · J {a.percents.J}%
-                </div>
-              </details>
-            ))}
-          </Card>
-        )}
-
         {agentError && (
           <Card badge="AI 出题失败">
             <p style={{ color: '#c44', margin: 0 }}>{agentError}</p>
@@ -235,22 +218,116 @@ export default function Quiz({ onChangePage, showToast }) {
           </Card>
         )}
 
-        <Card>
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
-            {currentRoundQuestions.map((q, idx) => (
-              <li key={q.id} style={{ marginBottom: 28 }}>
-                <div style={{ marginBottom: 12, fontWeight: 500 }}>
-                  {roundIdx * QUESTIONS_PER_ROUND + idx + 1}. {q.text}
-                </div>
-                <LikertSlider
-                  options={SCALE_OPTIONS}
-                  value={answers[q.id]}
-                  onChange={(v) => pick(q.id, v)}
-                />
-              </li>
-            ))}
-          </ol>
-        </Card>
+        {/* 题目（左）+ 小紫分析（右） */}
+        <div className="quiz-layout" style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 320px',
+          gap: 20,
+          alignItems: 'start'
+        }}>
+          <Card>
+            <ol style={{ paddingLeft: 0, margin: 0, listStyle: 'none' }}>
+              {currentRoundQuestions.map((q, idx) => (
+                <li key={q.id} style={{ marginBottom: 28 }}>
+                  <div style={{ marginBottom: 12, fontWeight: 500 }}>
+                    <span style={{
+                      display: 'inline-block',
+                      minWidth: 28,
+                      marginRight: 8,
+                      color: '#7b4ad6',
+                      fontWeight: 600
+                    }}>
+                      {roundIdx * QUESTIONS_PER_ROUND + idx + 1}.
+                    </span>
+                    {q.text}
+                  </div>
+                  <LikertSlider
+                    options={SCALE_OPTIONS}
+                    value={answers[q.id]}
+                    onChange={(v) => pick(q.id, v)}
+                  />
+                </li>
+              ))}
+            </ol>
+          </Card>
+
+          {/* 右侧：小紫 + 分析气泡（sticky） */}
+          <aside style={{ position: 'sticky', top: 20 }}>
+            <div style={{
+              background: 'linear-gradient(160deg, rgba(200,168,255,0.12), rgba(255,177,224,0.12))',
+              borderRadius: 20,
+              padding: 16,
+              border: '1px solid rgba(168,123,255,0.18)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                <PurpleSage mood={latestAnalysis ? 'happy' : 'wave'} size={140} />
+              </div>
+              <div style={{ textAlign: 'center', fontWeight: 600, color: '#7b4ad6', marginBottom: 10 }}>
+                小紫 · 你的人格观察者
+              </div>
+
+              <div style={{
+                background: '#fff',
+                borderRadius: 14,
+                padding: '12px 14px',
+                fontSize: 13,
+                lineHeight: 1.75,
+                boxShadow: '0 2px 10px rgba(123,74,214,0.08)',
+                position: 'relative'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: -8,
+                  left: '50%',
+                  transform: 'translateX(-50%) rotate(45deg)',
+                  width: 14,
+                  height: 14,
+                  background: '#fff',
+                  borderTopLeftRadius: 3
+                }} />
+
+                {latestAnalysis ? (
+                  <>
+                    <div style={{ fontSize: 12, color: '#7b4ad6', marginBottom: 6, fontWeight: 600 }}>
+                      第 {latestAnalysis.roundIdx + 1} 轮分析 · 推断 {latestAnalysis.mbti}
+                    </div>
+                    <div style={{ color: '#333' }}>{latestAnalysis.text}</div>
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#999' }}>
+                      E {latestAnalysis.percents.E}% · S {latestAnalysis.percents.S}% · T {latestAnalysis.percents.T}% · J {latestAnalysis.percents.J}%
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#666' }}>
+                    你好，我是小紫。先把这 10 题做完，我会在每轮结束时告诉你我观察到的人格倾向。
+                  </div>
+                )}
+              </div>
+
+              {analyses.length > 1 && (
+                <details style={{ marginTop: 12, fontSize: 12 }}>
+                  <summary style={{ cursor: 'pointer', color: '#7b4ad6' }}>
+                    查看前 {analyses.length - 1} 轮分析
+                  </summary>
+                  <div style={{ marginTop: 8 }}>
+                    {analyses.slice(0, -1).map((a, i) => (
+                      <div key={i} style={{
+                        background: 'rgba(255,255,255,0.6)',
+                        padding: 10,
+                        borderRadius: 10,
+                        marginBottom: 6
+                      }}>
+                        <div style={{ fontWeight: 600, color: '#7b4ad6' }}>
+                          第 {a.roundIdx + 1} 轮 · {a.mbti}
+                        </div>
+                        <div style={{ marginTop: 4, opacity: 0.8 }}>{a.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          </aside>
+        </div>
 
         <div className="button-row" style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
           <Button variant="ghost" onClick={finishEarly}>提前结束</Button>

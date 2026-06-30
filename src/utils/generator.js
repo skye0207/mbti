@@ -130,20 +130,29 @@ function translateByRule(input) {
  * @param {AbortSignal} [opts.signal]
  * @returns {Promise<{recommended,gentle,direct,avoid,reason, agentTrace: object}>}
  */
+/**
+ * Agent 协作版翻译（简化）：
+ * - 仅调用 TranslatorAgent，返回 { translated, reason }
+ * - 不再调用 OpponentAgent / MediatorAgent / 不再返回多版本
+ * - LLM 不可用时回退到规则版（取 recommended 当 translated）
+ */
 export async function generateTranslateResultAgentic(input, { onStep, signal } = {}) {
   const emit = (step) => { try { onStep && onStep(step); } catch { /* noop */ } };
 
   if (!isLLMAvailable()) {
     emit({ agent: 'system', status: 'done', data: { fallback: true, reason: '未配置 LLM，使用规则版' } });
-    const result = translateByRule(input);
+    const rule = translateByRule(input);
     MemoryAgent.record({ ...input, mode: 'rule' });
-    return { ...result, agentTrace: { fallback: true } };
+    return {
+      translated: rule.recommended,
+      reason: rule.reason,
+      agentTrace: { fallback: true }
+    };
   }
 
   const memoryHints = await MemoryAgent.getHints({ signal }).catch(() => '');
   emit({ agent: 'MemoryAgent', status: 'done', data: { hints: memoryHints || '(无历史)' } });
 
-  // 1) Translator
   emit({ agent: 'TranslatorAgent', status: 'start' });
   let translation;
   try {
@@ -151,62 +160,26 @@ export async function generateTranslateResultAgentic(input, { onStep, signal } =
     emit({ agent: 'TranslatorAgent', status: 'done', data: translation });
   } catch (e) {
     emit({ agent: 'TranslatorAgent', status: 'error', error: String(e.message || e) });
-    const fallback = translateByRule(input);
-    return { ...fallback, agentTrace: { translatorError: String(e.message || e) } };
+    const rule = translateByRule(input);
+    return {
+      translated: rule.recommended,
+      reason: rule.reason,
+      agentTrace: { translatorError: String(e.message || e) }
+    };
   }
 
-  // 2) Opponent（基于推荐版预演）
-  emit({ agent: 'OpponentAgent', status: 'start' });
-  let opponentReaction = null;
-  try {
-    opponentReaction = await OpponentAgent.run({
-      targetMbti: input.targetMbti,
-      relation: input.relation,
-      messageToReact: translation.recommended
-    }, { signal, temperature: 0.8 });
-    emit({ agent: 'OpponentAgent', status: 'done', data: opponentReaction });
-  } catch (e) {
-    emit({ agent: 'OpponentAgent', status: 'error', error: String(e.message || e) });
-  }
-
-  // 3) Mediator（综合判断）
-  emit({ agent: 'MediatorAgent', status: 'start' });
-  let mediation = null;
-  try {
-    mediation = await MediatorAgent.run({
-      myMbti: input.myMbti,
-      targetMbti: input.targetMbti,
-      relation: input.relation,
-      translation,
-      opponentReaction
-    }, { signal, temperature: 0.4 });
-    emit({ agent: 'MediatorAgent', status: 'done', data: mediation });
-  } catch (e) {
-    emit({ agent: 'MediatorAgent', status: 'error', error: String(e.message || e) });
-  }
-
-  // 4) Memory 落库
   MemoryAgent.record({
     targetMbti: input.targetMbti,
     relation: input.relation,
     emotion: input.emotion,
     originalText: input.originalText,
-    mode: 'agentic',
-    verdict: mediation?.verdict
+    mode: 'agentic'
   });
 
-  // 把 Mediator 的 reason 融合进 reason 字段，让旧 UI 也能直接展示
-  const reason = mediation
-    ? `${translation.reason}\n\n【对方预演】${opponentReaction?.likelyReply || ''}（${opponentReaction?.emotionalTone || ''}）\n【调解判断】${mediation.verdict}\n${mediation.mismatch ? '错位：' + mediation.mismatch : ''}\n${mediation.nextStep ? '若反应不佳：' + mediation.nextStep : ''}`
-    : translation.reason;
-
   return {
-    recommended: translation.recommended,
-    gentle: translation.gentle,
-    direct: translation.direct,
-    avoid: translation.avoid,
-    reason,
-    agentTrace: { memoryHints, translation, opponentReaction, mediation }
+    translated: translation.translated || '',
+    reason: translation.reason || '',
+    agentTrace: { memoryHints, translation }
   };
 }
 
